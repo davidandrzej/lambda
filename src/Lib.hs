@@ -10,7 +10,6 @@ import qualified Data.Set as Set
 --
 -- Functions
 -- substitution [N/x]M
--- alpha-conversion (and congruence)
 -- beta-reduction (and convertible)
 -- 
 --
@@ -23,6 +22,10 @@ data Term =
     AppTerm Term Term |
     AbsTerm { binding :: Variable, body :: Term} deriving (Show, Eq)
     
+-- hacky way to generate "new" variable name
+allVars = Set.fromList ['a', 'b', 'c', 'd']
+newVar :: Variable -> Variable -> Variable
+newVar v1 v2 = head $ Set.toList (Set.delete v2 (Set.delete v1 allVars))
     
 atom0 = AtomTerm 0
 lambdaIdentityX = AbsTerm (unVarTerm variableX) variableX
@@ -30,6 +33,35 @@ variableX = VarTerm 'x'
 variableY = VarTerm 'y'
 appAtomX = AppTerm atom0 variableX
 lambdaX = AbsTerm (unVarTerm variableX) appAtomX
+
+--substitution 
+substitute :: Term -> Variable -> Term -> Term
+substitute termVal tgtVar (AtomTerm a) = AtomTerm a
+substitute termVal tgtVar (VarTerm v) = 
+    if(v == tgtVar) then termVal else (VarTerm v)
+substitute termVal tgtVar (AppTerm lt rt) = 
+    AppTerm (substitute termVal tgtVar lt) (substitute termVal tgtVar rt)
+substitute termVal tgtVar (AbsTerm bindVar bodyTerm) = 
+    if(bindVar == tgtVar)
+    then AbsTerm tgtVar bodyTerm -- Sub "overridden" by binding, so no-op
+    else
+        let fvBody = freeVars bodyTerm Set.empty
+            fvVal = freeVars termVal Set.empty
+        in
+            if(not $ Set.member tgtVar fvBody)
+            then AbsTerm bindVar bodyTerm -- No free occurrence, so no-op
+            else
+                if(not $ Set.member bindVar fvVal) 
+                -- Inner binding _not_ a FV in new term (no rename necessary)
+                then AbsTerm bindVar (substitute termVal tgtVar bodyTerm) 
+                -- Inner binding is FV in new term, need to do rename
+                else 
+                    let uniqVar = newVar tgtVar bindVar
+                    in AbsTerm uniqVar (substitute termVal tgtVar ( 
+                        substitute (VarTerm uniqVar) bindVar bodyTerm
+                    ))                    
+
+--betaReduce 
 
 alphaConvert :: Term -> Variable -> Variable -> Term
 alphaConvert (AtomTerm a) _ _ = (AtomTerm a)
@@ -63,6 +95,8 @@ occursIn _ _ = False
 
 someFunc :: IO ()
 someFunc = do
+    putStrLn $ show (substitute atom0 'x' variableX)
+    putStrLn $ show (substitute atom0 'x' variableY)
     putStrLn $ show (alphaConvert lambdaX 'x' 'y')
     putStrLn $ show (freeVars appAtomX Set.empty)
     putStrLn $ show (freeVars appAtomX (Set.singleton (unVarTerm variableX)))
