@@ -5,14 +5,10 @@ module Lib
 import Data.Set (Set)
 import qualified Data.Set as Set
 
--- Data structure
--- term: variable, const, application (MN), abstraction (\x.M)
 --
 -- Functions
--- substitution [N/x]M
 -- beta-reduction (and convertible)
 -- 
---
 
 type Variable = Char
 type Atomic = Int
@@ -27,13 +23,6 @@ allVars = Set.fromList ['a', 'b', 'c', 'd']
 newVar :: Variable -> Variable -> Variable
 newVar v1 v2 = head $ Set.toList (Set.delete v2 (Set.delete v1 allVars))
     
-atom0 = AtomTerm 0
-lambdaIdentityX = AbsTerm (unVarTerm variableX) variableX
-variableX = VarTerm 'x'
-variableY = VarTerm 'y'
-appAtomX = AppTerm atom0 variableX
-lambdaX = AbsTerm (unVarTerm variableX) appAtomX
-
 --substitution 
 substitute :: Term -> Variable -> Term -> Term
 substitute termVal tgtVar (AtomTerm a) = AtomTerm a
@@ -61,7 +50,24 @@ substitute termVal tgtVar (AbsTerm bindVar bodyTerm) =
                         substitute (VarTerm uniqVar) bindVar bodyTerm
                     ))                    
 
---betaReduce 
+-- beta reduction: find any instance of an application
+-- where left term is abstraction, then do substitution
+--
+-- Put another way, this function is going to give you the 
+-- 1-neighborhood of the \triangleright_{1\beta} relation 
+-- 
+-- TODO is this associativity logic correct?
+--
+betaReduce :: Term -> [Term]
+betaReduce a@(AtomTerm _) = [a]
+betaReduce v@(VarTerm _) = [v]
+betaReduce (AbsTerm bindVar bodyTerm) = 
+    (\x -> (AbsTerm bindVar x)) <$> (betaReduce bodyTerm)
+betaReduce (AppTerm (AbsTerm bindVar bodyTerm) rt) = 
+    [substitute rt bindVar bodyTerm]
+betaReduce (AppTerm lt rt) = 
+    ((\x -> (AppTerm x rt)) <$> (betaReduce lt)) ++
+    ((\x -> (AppTerm lt x)) <$> (betaReduce rt))
 
 alphaConvert :: Term -> Variable -> Variable -> Term
 alphaConvert (AtomTerm a) _ _ = (AtomTerm a)
@@ -93,8 +99,23 @@ occursIn t1 t2@(AbsTerm _ bd) = t1 == t2 || occursIn t1 bd
 occursIn t1 t2@(AppTerm at1 at2) = t1 == t2 || occursIn t1 at1 || occursIn t1 at2
 occursIn _ _ = False
 
+atom1 = AtomTerm 1
+atom0 = AtomTerm 0
+lambdaIdentityX = AbsTerm (unVarTerm variableX) variableX
+variableX = VarTerm 'x'
+variableY = VarTerm 'y'
+appAtomX = AppTerm atom0 variableX
+lambdaX = AbsTerm (unVarTerm variableX) appAtomX
+appLambda0 = AppTerm lambdaIdentityX atom0
+doubleApp = AppTerm appLambda0 (AppTerm lambdaX atom1) 
+
+
 someFunc :: IO ()
 someFunc = do
+    putStrLn $ show (betaReduce doubleApp)    
+    putStrLn $ show (betaReduce appLambda0)    
+    putStrLn $ show (betaReduce variableX)    
+    putStrLn $ show (betaReduce atom0)
     putStrLn $ show (substitute atom0 'x' variableX)
     putStrLn $ show (substitute atom0 'x' variableY)
     putStrLn $ show (alphaConvert lambdaX 'x' 'y')
