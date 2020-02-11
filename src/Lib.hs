@@ -4,6 +4,7 @@ module Lib
 
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.List 
 
 --
 -- Functions
@@ -18,8 +19,9 @@ data Term =
     AppTerm Term Term |
     AbsTerm { binding :: Variable, body :: Term} deriving (Show, Eq)
     
--- hacky way to generate "new" variable name
-allVars = Set.fromList ['a', 'b', 'c', 'd']
+-- (very) hacky way to generate "new" variable names, chosen
+-- from an artificially constrained set of possibilities 
+allVars = Set.fromList ['a', 'b', 'c', 'd', 'x', 'y', 'z']
 newVar :: Variable -> Variable -> Variable
 newVar v1 v2 = head $ Set.toList (Set.delete v2 (Set.delete v1 allVars))
     
@@ -69,6 +71,29 @@ betaReduce (AppTerm lt rt) =
     ((\x -> (AppTerm x rt)) <$> (betaReduce lt)) ++
     ((\x -> (AppTerm lt x)) <$> (betaReduce rt))
 
+-- Can we convert A into B by some finite sequence
+-- of alpha-conversions? For now, let's brute-force
+-- over the space of possible variable re-namings
+alphaConvertible :: Term -> Term -> Int -> Bool
+alphaConvertible src tgt 0 = (src == tgt)
+alphaConvertible src tgt n = 
+    if (src == tgt) 
+        then True 
+        else -- generate all 1-adjacent alpha conversions
+            let alphaAdjacent = ((uncurry (alphaConvert src)) <$>  (varRenamings allVars))
+            in 
+                (any (== tgt) alphaAdjacent) || -- any 1-adjacent match?
+                (any (\x -> alphaConvertible x tgt (n - 1)) alphaAdjacent) -- otherwise continue BFS
+
+-- Helper function to generate all possible renamings
+varRenamings :: Set.Set Variable -> [(Variable, Variable)]
+varRenamings varSet = _varRenamings $ Set.toList varSet
+
+_varRenamings :: [Variable] -> [(Variable, Variable)]
+_varRenamings (x : xs) = 
+    (concat $ (\y -> [(x,y), (y,x)]) <$> xs) ++ (_varRenamings xs) 
+_varRenamings _ = []
+
 alphaConvert :: Term -> Variable -> Variable -> Term
 alphaConvert (AtomTerm a) _ _ = (AtomTerm a)
 alphaConvert (VarTerm v) src tgt = 
@@ -104,14 +129,36 @@ atom0 = AtomTerm 0
 lambdaIdentityX = AbsTerm (unVarTerm variableX) variableX
 variableX = VarTerm 'x'
 variableY = VarTerm 'y'
+variableZ = VarTerm 'z'
+variableB = VarTerm 'b'
+variableA = VarTerm 'a'
 appAtomX = AppTerm atom0 variableX
 lambdaX = AbsTerm (unVarTerm variableX) appAtomX
 appLambda0 = AppTerm lambdaIdentityX atom0
-doubleApp = AppTerm appLambda0 (AppTerm lambdaX atom1) 
 
+doubleApp = AppTerm appLambda0 (AppTerm lambdaX atom1) 
+-- (\x.x 0)(\x.(0 x) 1)
+-- 1-nbd should be 
+-- (0 (\x.(0 x) 1)
+-- (\x.x 0)(0 1) 
+
+-- Test case for 2-distance alpha convertibility
+appAtomY = AppTerm atom0 variableY
+appAtomB = AppTerm atom0 variableB
+absXY = AbsTerm 'x' (AbsTerm 'y' appAtomY)
+absAB = AbsTerm 'a' (AbsTerm 'b' appAtomB)
 
 someFunc :: IO ()
 someFunc = do
+    putStrLn $ show (alphaConvertible absAB absXY 3)
+    putStrLn $ show (alphaConvertible absAB absXY 2)
+    putStrLn $ show (alphaConvertible absAB absXY 1)
+    putStrLn $ show (alphaConvertible absAB absXY 0)
+    putStrLn $ show (alphaConvertible variableX variableX 1)
+    putStrLn $ show (alphaConvertible variableX variableY 1)        
+    putStrLn $ show (varRenamings (Set.fromList ['x', 'y', 'z']))
+    putStrLn $ show (alphaConvertible variableX variableX 0)
+    putStrLn $ show (alphaConvertible variableX variableY 0)    
     putStrLn $ show (betaReduce doubleApp)    
     putStrLn $ show (betaReduce appLambda0)    
     putStrLn $ show (betaReduce variableX)    
