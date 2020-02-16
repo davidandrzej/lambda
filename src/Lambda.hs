@@ -1,15 +1,15 @@
-module Lib
-    ( someFunc
+module Lambda
+    ( occursIn,
+        freeVars,
+        alphaConvert,
+        substitute,
+        betaReduce,
+        alphaConvertible
     ) where
 
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.List 
-
---
--- Functions
--- beta-reduction (and convertible)
--- 
 
 type Variable = Char
 type Atomic = Int
