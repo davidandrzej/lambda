@@ -86,22 +86,37 @@ testBetaReduction = TestCase $ do
     assertEqual "No-op beta-reduction on atom"
         (betaReduce atom0) [atom0]
 
+testVarRenamings :: Test
+testVarRenamings = TestCase $
+    assertEqual "Generate candidate variable renamings"
+    (Set.fromList $ varRenamings (Set.fromList ['x', 'y', 'z'])) 
+    (Set.fromList [('x','y'), ('x', 'z'), ('y', 'x'), ('y', 'z'), ('z', 'x'), ('z', 'y')])
+
+testAlphaConvertible :: Test
+testAlphaConvertible = TestCase $ do
+    assertEqual "Alpha convertibility check on 2-step, given 3"
+        (alphaConvertible absAB absXY 3) True
+    assertEqual "Alpha convertibility check on 2-step, given 2"
+        (alphaConvertible absAB absXY 2) True
+    assertEqual "Alpha convertibility check on 2-step, given 1"
+        (alphaConvertible absAB absXY 1) False
+    assertEqual "Alpha convertibility check on 2-step, given 0"
+        (alphaConvertible absAB absXY 0) False
+    assertEqual "Alpha convertibility check on no-op, given 1 "
+        (alphaConvertible variableX variableX 1) True        
+    assertEqual "Alpha convertibility check on no-op, given 0"
+        (alphaConvertible variableX variableX 0) True    
+    assertEqual "Alpha convertibility check on 1-step, given 1"
+        (alphaConvertible variableX variableY 1) True       
+    assertEqual "Alpha convertibility check on 1-step, given 0"
+        (alphaConvertible variableX variableY 0) False     
+        
 main :: IO Counts
 main = runTestTT $ TestList 
     [testBasicOccursIn, 
     testAlphaConvert,
     testFreeVars,
     testSubstitution, 
-    testBetaReduction]
-
---main = putStrLn "Spec!"
--- main = do
---     putStrLn $ show (alphaConvertible absAB absXY 3)
---     putStrLn $ show (alphaConvertible absAB absXY 2)
---     putStrLn $ show (alphaConvertible absAB absXY 1)
---     putStrLn $ show (alphaConvertible absAB absXY 0)
---     putStrLn $ show (alphaConvertible variableX variableX 1)
---     putStrLn $ show (alphaConvertible variableX variableY 1)        
---     putStrLn $ show (varRenamings (Set.fromList ['x', 'y', 'z']))
---     putStrLn $ show (alphaConvertible variableX variableX 0)
---     putStrLn $ show (alphaConvertible variableX variableY 0)    
+    testBetaReduction,
+    testVarRenamings,
+    testAlphaConvertible]
