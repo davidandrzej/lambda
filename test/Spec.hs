@@ -21,6 +21,8 @@ appLambda0 = AppTerm lambdaIdentityX atom0
 absFreeVar = AbsTerm 'x' appAtomY
 
 doubleApp = AppTerm appLambda0 (AppTerm lambdaX atom1) 
+doubleAppChild1 = AppTerm atom0 (AppTerm lambdaX atom1) 
+doubleAppChild2 = AppTerm appLambda0 (AppTerm atom0 atom1)
 -- (\x.x 0)(\x.(0 x) 1)
 -- 1-nbd should be 
 -- (0 (\x.(0 x) 1)
@@ -73,12 +75,24 @@ testSubstitution = TestCase $ do
     assertEqual "Basic no-op substitution" 
         (substitute atom0 'x' variableY) variableY
 
+testBetaReduction :: Test
+testBetaReduction = TestCase $ do
+    assertEqual "Branching beta-reduction neighborhood" 
+        (betaReduce doubleApp) [doubleAppChild1, doubleAppChild2]
+    assertEqual "Basic beta-reduction" 
+         (betaReduce appLambda0) [atom0]
+    assertEqual "No-op beta-reduction on variable" 
+        (betaReduce variableX) [variableX]      
+    assertEqual "No-op beta-reduction on atom"
+        (betaReduce atom0) [atom0]
+
 main :: IO Counts
 main = runTestTT $ TestList 
     [testBasicOccursIn, 
     testAlphaConvert,
     testFreeVars,
-    testSubstitution]
+    testSubstitution, 
+    testBetaReduction]
 
 --main = putStrLn "Spec!"
 -- main = do
@@ -91,7 +105,3 @@ main = runTestTT $ TestList
 --     putStrLn $ show (varRenamings (Set.fromList ['x', 'y', 'z']))
 --     putStrLn $ show (alphaConvertible variableX variableX 0)
 --     putStrLn $ show (alphaConvertible variableX variableY 0)    
---     putStrLn $ show (betaReduce doubleApp)    
---     putStrLn $ show (betaReduce appLambda0)    
---     putStrLn $ show (betaReduce variableX)    
---     putStrLn $ show (betaReduce atom0)
