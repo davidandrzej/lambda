@@ -59,21 +59,26 @@ testFreeVars = TestCase $ do
     assertEqual "Abstraction free vars, with free" 
         (freeVars absFreeVar Set.empty)
         (Set.singleton 'y')
-    assertEqual "Application edge case, no free"
-        (freeVars (AppTerm lambdaX lambdaY) Set.empty)
-        Set.empty
-
+    
 testAlphaConvert :: Test
 testAlphaConvert = TestCase $ 
     assertEqual "Basic alpha conversion" 
         (alphaConvert lambdaX 'x' 'y')
         lambdaY        
 
+testSubstitution :: Test
+testSubstitution = TestCase $ do
+    assertEqual "Basic substitution" 
+        (substitute atom0 'x' variableX) atom0
+    assertEqual "Basic no-op substitution" 
+        (substitute atom0 'x' variableY) variableY
+
 main :: IO Counts
 main = runTestTT $ TestList 
     [testBasicOccursIn, 
     testAlphaConvert,
-    testFreeVars]
+    testFreeVars,
+    testSubstitution]
 
 --main = putStrLn "Spec!"
 -- main = do
@@ -90,5 +95,3 @@ main = runTestTT $ TestList
 --     putStrLn $ show (betaReduce appLambda0)    
 --     putStrLn $ show (betaReduce variableX)    
 --     putStrLn $ show (betaReduce atom0)
---     putStrLn $ show (substitute atom0 'x' variableX)
---     putStrLn $ show (substitute atom0 'x' variableY)
