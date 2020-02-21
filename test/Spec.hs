@@ -4,6 +4,7 @@ import qualified Data.Set as Set
 import Test.HUnit
 
 import Lambda
+import CL
 
 atom1 = AtomTerm 1
 atom0 = AtomTerm 0
@@ -110,13 +111,19 @@ testAlphaConvertible = TestCase $ do
         (alphaConvertible variableX variableY 1) True       
     assertEqual "Alpha convertibility check on 1-step, given 0"
         (alphaConvertible variableX variableY 0) False     
-        
-main :: IO Counts
-main = runTestTT $ TestList 
-    [testBasicOccursIn, 
+
+lambdaTests = [testBasicOccursIn, 
     testAlphaConvert,
     testFreeVars,
     testSubstitution, 
     testBetaReduction,
     testVarRenamings,
     testAlphaConvertible]
+
+testClNoop :: Test
+testClNoop = TestCase $ 
+    assertEqual "Basic CL test" ClS ClS                
+clTests = [testClNoop]
+
+main :: IO Counts
+main = runTestTT $ TestList (lambdaTests ++ clTests)    
