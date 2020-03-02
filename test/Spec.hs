@@ -112,6 +112,7 @@ testAlphaConvertible = TestCase $ do
     assertEqual "Alpha convertibility check on 1-step, given 0"
         (alphaConvertible variableX variableY 0) False     
 
+-- Container for all Lambda tests        
 lambdaTests = [testBasicOccursIn, 
     testAlphaConvert,
     testFreeVars,
@@ -120,10 +121,34 @@ lambdaTests = [testBasicOccursIn,
     testVarRenamings,
     testAlphaConvertible]
 
-testClNoop :: Test
-testClNoop = TestCase $ 
-    assertEqual "Basic CL test" ClS ClS                
-clTests = [testClNoop]
+clVarA = ClVarTerm 'a'
+clTermS = ClPrimitiveTerm ClS
+clTermK = ClPrimitiveTerm ClK
+clTermI = ClPrimitiveTerm ClI
+
+testClOccursIn :: Test
+testClOccursIn = TestCase $ do 
+    assertEqual "clOccursIn on basic combinator - yes" 
+        (clOccursIn clTermS clTermS) True 
+    assertEqual "clOccursIn on variable - yes" 
+        (clOccursIn clVarA clVarA) True         
+    assertEqual "clOccursIn in application - yes" 
+        (clOccursIn clTermS (ClAppTerm clTermS clTermI)) True 
+    assertEqual "clOccursIn on application - yes" 
+        (clOccursIn (ClAppTerm clTermS clTermI)
+                    (ClAppTerm clTermS clTermI)) True 
+    assertEqual "clOccursIn on basic combinator - no"
+        (clOccursIn clTermS clTermK) False
+    assertEqual "clOccursIn on variable - no"
+        (clOccursIn clVarA clTermK) False
+    assertEqual "clOccursIn in application - no"
+        (clOccursIn clTermS (ClAppTerm clTermK clTermI)) False
+    assertEqual "clOccursIn on application - no"
+        (clOccursIn (ClAppTerm clTermS clTermI) 
+                    (ClAppTerm clTermK clTermI)) False
+
+-- Container for all CL tests
+clTests = [testClOccursIn]
 
 main :: IO Counts
 main = runTestTT $ TestList (lambdaTests ++ clTests)    

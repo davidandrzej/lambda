@@ -1,11 +1,21 @@
 module CL
     (
-        ClVariable,
+        ClVar,
         ClPrimitive (..), 
-        ClTerm (..)
+        ClTerm (..),
+        clOccursIn
     ) where
 
-type ClVariable = Char
+-- Note: products are left-associative: ABCD = ((AB)C)D
+type ClVar = Char
 data ClPrimitive = ClS | ClK | ClI deriving (Show, Eq)
-data ClTerm = ClVar | ClPrimitive | ClApp ClTerm ClTerm deriving (Show, Eq)
+data ClTerm = 
+    ClVarTerm { unClVarTerm :: ClVar } | 
+    ClPrimitiveTerm {unClPrimitiveTerm :: ClPrimitive} | 
+    ClAppTerm ClTerm ClTerm deriving (Show, Eq)
+
+clOccursIn :: ClTerm -> ClTerm -> Bool
+clOccursIn x (ClAppTerm u v) = 
+    (x == (ClAppTerm u v)) || (clOccursIn x u) || (clOccursIn x v)
+clOccursIn x y = x == y
 
