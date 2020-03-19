@@ -122,6 +122,8 @@ lambdaTests = [testBasicOccursIn,
     testAlphaConvertible]
 
 clVarA = ClVarTerm 'a'
+clVarB = ClVarTerm 'b'
+clVarC = ClVarTerm 'c'
 clTermS = ClPrimitiveTerm ClS
 clTermK = ClPrimitiveTerm ClK
 clTermI = ClPrimitiveTerm ClI
@@ -147,8 +149,33 @@ testClOccursIn = TestCase $ do
         (clOccursIn (ClAppTerm clTermS clTermI) 
                     (ClAppTerm clTermK clTermI)) False
 
+clAppAI = ClAppTerm clVarA clTermI
+clAppIA = ClAppTerm clTermI clVarA
+clAppKA = ClAppTerm clTermK clVarA
+clAppKAB = ClAppTerm (ClAppTerm clTermK clVarA) clVarB
+clAppSABC = ClAppTerm (ClAppTerm (ClAppTerm clTermS clVarA) clVarB) clVarC
+
+testClWeaklyReduces :: Test
+testClWeaklyReduces = TestCase $ do
+    assertEqual "clWeaklyReduces on basic variable"
+        (weaklyReduces clVarA) clVarA
+    assertEqual "clWeaklyReduces on primitive"
+        (weaklyReduces clTermS) clTermS
+    assertEqual "clWeaklyReduces on aI"
+        (weaklyReduces clAppAI) clAppAI
+    assertEqual "clWeaklyReduces on Ia"
+        (weaklyReduces clAppIA) clVarA
+    assertEqual "clWeaklyReduces on Kab"
+        (weaklyReduces (weaklyReduces clAppKAB)) clVarA
+    assertEqual "clWeaklyReduces on aKab"
+        (weaklyReduces (weaklyReduces (ClAppTerm clVarA clAppKAB))) 
+        (ClAppTerm clVarA clVarA)
+    assertEqual "clWeaklyReduces on Sabc"
+        (weaklyReduces (weaklyReduces (weaklyReduces clAppSABC)))
+        (ClAppTerm (ClAppTerm clVarA clVarC) (ClAppTerm clVarB clVarC))
+
 -- Container for all CL tests
-clTests = [testClOccursIn]
+clTests = [testClOccursIn, testClWeaklyReduces]
 
 main :: IO Counts
 main = runTestTT $ TestList (lambdaTests ++ clTests)    
